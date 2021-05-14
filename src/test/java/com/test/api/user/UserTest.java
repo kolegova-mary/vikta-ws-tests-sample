@@ -7,34 +7,69 @@ import com.test.api.execution.BaseTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.parsing.Parser;
+import io.restassured.response.Response;
+import jdk.nashorn.internal.ir.RuntimeNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class UserTest extends BaseTest {
     @Test
-    public void addUserAndChangeDetails() {
-        User user = new User("try6", null, "frgvsrgb", "fergv@mail.ru",
-                "grsbgtb", "gretgrvb", "vgergtrhb",null,null,null);
-        given().spec(defaultRequestSpec())
-                .body(user)
-                .post(getTestEnvironment().getUserPath());
-    }
+    public void addUser() {
+        User user = new User("passitplease", null, "frgvsrgb", "fergv@mail.ru",
+                "grsbgtb", "gretgrvb", "vgergtrhb",
+                "https://i.pinimg.com/originals/d1/5f/fc/d15ffc218562b3368712f2e15a6efa04.jpg",
+                null, null);
 
-    @Test
-    public void editUser(){
-        // Give id of user which you want to edit
-        User user = new User("try6", 64, "next", "next@mail.ru",
-                "next", "next", "next",null,null,null);
-        given().spec(defaultRequestSpec())
+        Response response = given().spec(defaultRequestSpec())
                 .body(user)
                 .post(getTestEnvironment().getUserPath())
                 .then()
                 .extract()
                 .response();
+
+        assertThat(response.getStatusCode(), equalTo(201));
+        assertThat(response.getBody().as(User.class).getLoginName(), equalTo(user.getLoginName()));
+        assertThat(response.getBody().as(User.class).getPassword(), equalTo(user.getPassword()));
+        assertThat(response.getBody().as(User.class).getEmail(), equalTo(user.getEmail()));
+        assertThat(response.getBody().as(User.class).getFirstName(), equalTo(user.getFirstName()));
+        assertThat(response.getBody().as(User.class).getSurname(), equalTo(user.getSurname()));
+        assertThat(response.getBody().as(User.class).getMiddleName(), equalTo(user.getMiddleName()));
+        assertThat(response.getBody().as(User.class).getId(), instanceOf(Integer.TYPE));
+
+
+    }
+
+    @Test
+    public void editSurnameLastAddedUser() {
+        User[] users = given().spec(defaultRequestSpec())
+                .when()
+                .get(getTestEnvironment().getUsersPath())
+                .then()
+                .spec(defaultResponseSpec())
+                .extract()
+                .as(User[].class);
+
+        List<User> userList = Arrays.asList(users);
+        User user = userList.get(userList.size() - 1);
+        user.setSurname("change");
+
+
+        Response response = given().spec(defaultRequestSpec())
+                .body(user)
+                .post(getTestEnvironment().getUserPath())
+                .then()
+                .extract()
+                .response();
+
+        assertThat(response.getStatusCode(), equalTo(201));
+        assertThat(response.getBody().as(User.class), equalTo(user));
     }
 
     @Test
@@ -47,14 +82,16 @@ public class UserTest extends BaseTest {
                 .extract()
                 .as(User[].class);
 
-        for (User user:users){
+        for (User user : users) {
             user.setSurname("rere");
-            given().spec(defaultRequestSpec())
+            Response response = given().spec(defaultRequestSpec())
                     .body(user)
                     .post(getTestEnvironment().getUserPath())
                     .then()
                     .extract()
                     .response();
+            assertThat(response.getStatusCode(), equalTo(201));
+            assertThat(response.getBody().as(User.class), equalTo(user));
         }
 
     }
